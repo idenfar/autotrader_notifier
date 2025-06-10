@@ -24,7 +24,7 @@ jobs:
           TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
           TWILIO_TO: ${{ secrets.TWILIO_TO }}
           SEARCH_URL: ${{ secrets.SEARCH_URL }}
-      - uses: actions/upload-artifact@v3
+      - uses: actions/upload-artifact@v4
         with:
           name: seen_listings
           path: seen_listings.json
