@@ -62,3 +62,27 @@ To run the notifier again later just run:
 python autotrader_bot.py
 ```
 
+## Run in the cloud (GitHub Actions)
+
+You can automate the notifier in the cloud using GitHub Actions. This
+lets it run on a schedule without your computer needing to be on.
+
+1. **Fork this repository** to your own GitHub account and clone the
+   fork locally if you want to make changes.
+2. In your fork on GitHub open **Settings → Secrets and variables →
+   Actions** and create secrets for each value from the **Required
+   information** list above. Use the same names (`SEARCH_URL`,
+   `GMAIL_USER`, `GMAIL_APP_PASSWORD`, and so on).
+3. Push your fork to GitHub. The included workflow file
+   `.github/workflows/run_bot.yml` will run automatically every
+   30&nbsp;minutes.
+4. To change how often it runs, edit the `cron:` line in that workflow
+   file. For example `cron: '0 * * * *'` would run hourly. Commit the
+   change and push it to GitHub.
+5. You can also trigger a run manually from the **Actions** tab by
+   selecting the workflow and clicking **Run workflow**.
+
+The `seen_listings.json` artifact is saved after each run so that
+previously processed listings are remembered. If you ever want to start
+fresh simply delete the artifact from the run page.
+
