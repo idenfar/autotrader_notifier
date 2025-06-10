@@ -75,13 +75,15 @@ steps entirely in your web browser:
 1. **Fork this repository** – Click the **Fork** button at the top of the
    page to create a copy under your GitHub account.
 2. Open your fork's **Settings → Secrets and variables → Actions** page.
-   Add a new secret for each of the values you entered during local
-   setup: `SEARCH_URL`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`,
-   `TWILIO_SID`, `TWILIO_TOKEN`, `TWILIO_FROM`, and `TWILIO_TO`.
+   Add a secret for each value you collected during setup:
+   `SEARCH_URL`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `TWILIO_SID`,
+   `TWILIO_TOKEN`, `TWILIO_FROM`, and `TWILIO_TO`. You can return to this
+   page later to update the values if they change.
 3. Still in your fork, navigate to `.github/workflows/run_bot.yml` and
    click the pencil icon to edit the file. The line beginning with
-   `cron:` controls how often the notifier runs. Change it if you want a
-   different schedule, then choose **Commit changes**.
+   `cron:` controls how often the notifier runs (the default is every
+   30 minutes). Change this value if you want a different schedule and
+   choose **Commit changes**.
 4. The workflow will now run automatically according to the schedule you
    set. To trigger it immediately, open the **Actions** tab, select
    **Run AutoTrader Bot**, and click **Run workflow**.
