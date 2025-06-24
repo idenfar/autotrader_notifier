@@ -6,26 +6,30 @@ on:
   workflow_dispatch:
 
 permissions:
-  contents: write   # ← allows the bot to commit back to the repo
+  contents: write           # allow git push from the Action
 
 jobs:
   watch:
-    runs-on: ubuntu-latest
+    runs-on: ubuntu-22.04   # ← 22.04 has libasound2, avoids the 24.04 bug
     steps:
       - uses: actions/checkout@v4
         with:
-          fetch-depth: 0
-      - name: Setup Python
+          fetch-depth: 0        # keep history so git push works
+
+      - name: Set up Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
-      - name: Install deps (incl. Playwright)
+
+      - name: Install Python deps + Playwright browsers
         run: |
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
+
       - name: Run bot
-        env: ${{ secrets }}   # exposes all repo secrets
+        env: ${{ secrets }}     # exposes all repo secrets as env vars
         run: python autotrader_bot.py
+
       - name: Commit any updates
         run: |
           git config user.name  "autotrader-bot"
