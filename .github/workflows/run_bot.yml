@@ -1,48 +1,37 @@
-name: Run Autotrader Bot
+name: AutoTrader Notifier
 
 on:
   schedule:
-    - cron: "*/15 * * * *"  # Runs every 15 minutes; adjust as needed.
+    - cron: "*/15 * * * *"
   workflow_dispatch:
 
+permissions:
+  contents: write   # ← allows the bot to commit back to the repo
+
 jobs:
-  run-bot:
+  watch:
     runs-on: ubuntu-latest
-
     steps:
-      - name: Checkout repository
-        uses: actions/checkout@v2
-
-      - name: Set up Python
-        uses: actions/setup-python@v2
+      - uses: actions/checkout@v4
         with:
-          python-version: "3.x"
-
-      - name: Install dependencies
+          fetch-depth: 0
+      - name: Setup Python
+        uses: actions/setup-python@v5
+        with:
+          python-version: "3.11"
+      - name: Install deps (incl. Playwright)
         run: |
-          python -m pip install --upgrade pip
-          pip install requests beautifulsoup4 twilio python-dotenv pytest
-
-      - name: Run tests
-        run: pytest -v
-
-      - name: Run autotrader bot
+          pip install -r requirements.txt
+          python -m playwright install --with-deps chromium
+      - name: Run bot
+        env: ${{ secrets }}   # exposes all repo secrets
         run: python autotrader_bot.py
-        env:
-          GMAIL_USER: ${{ secrets.GMAIL_USER }}
-          GMAIL_APP_PASSWORD: ${{ secrets.GMAIL_APP_PASSWORD }}
-          TWILIO_SID: ${{ secrets.TWILIO_SID }}
-          TWILIO_TOKEN: ${{ secrets.TWILIO_TOKEN }}
-          TWILIO_FROM: ${{ secrets.TWILIO_FROM }}
-          TWILIO_TO: ${{ secrets.TWILIO_TO }}
-          SEARCH_URL: ${{ secrets.SEARCH_URL }}
-
-      - name: Commit updated seen_listings.json
-        env:
-          GITHUB_TOKEN: ${{ secrets.GITHUB_TOKEN }}
+      - name: Commit any updates
         run: |
+          git config user.name  "autotrader-bot"
           git config user.email "actions@github.com"
-          git config user.name "GitHub Actions"
-          git add seen_listings.json archives/
-          git diff --cached --quiet || git commit -m "Update seen listings and archives [skip ci]"
-          git push origin HEAD:main
+          if ! git diff --quiet; then
+            git add archives/** seen_listings.json
+            git commit -m "Update seen listings and archives [skip ci]"
+            git push
+          fi
