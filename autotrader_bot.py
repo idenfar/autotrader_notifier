@@ -167,6 +167,10 @@ def send_email(cfg: dict, msg: str) -> None:
         smtp.sendmail(cfg["GMAIL_USER"], [cfg["GMAIL_USER"]], mime.as_string())
 
 
+    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
+    if not listings:
+        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
+    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
 def send_sms(cfg: dict, msg: str) -> None:
     client = Client(cfg["TWILIO_SID"], cfg["TWILIO_TOKEN"])
     client.messages.create(body=msg, from_=cfg["TWILIO_FROM"], to=cfg["TWILIO_TO"])
