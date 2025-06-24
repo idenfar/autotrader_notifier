@@ -36,7 +36,7 @@ You don’t need to install Python or run anything on your computer. The bot run
    3. Follow the prompts (confirm your password, add a phone, etc.) until it shows **On**.
 
 4. Create a Gmail App Password  
-   1. Back on the **Security** page, choose **App passwords** (sign in again if asked). If you can't find it, navigate to <https://myaccount.google.com/apppasswords>  
+   1. Back on the **Security** page, choose **App passwords** (sign in again if asked). Direct link: <https://myaccount.google.com/apppasswords>  
    2. Select **Mail** for the app and name it "AutoTrader Bot".  
    3. Click **Generate**.  
    4. Copy the 16-character password Google displays (omit the spaces).  
