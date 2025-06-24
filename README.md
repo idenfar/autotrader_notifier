@@ -1,94 +1,50 @@
-# AutoTrader Notifier
+AutoTrader Notifier
 
-This project provides a small Python script that checks an AutoTrader
-search page and notifies you of new listings via Gmail and Twilio SMS.
+This project provides a small Python script that checks an AutoTrader search page and notifies you of new listings via Gmail and Twilio SMS.
 
-## Step-by-step setup
+Running the Bot in the Cloud (GitHub Actions)
 
-The instructions below walk through the entire process as if you have
-never used Python before. Follow them in order and you will have a working notifier on your own computer.
+Everything happens in the cloud using GitHub Actions. You do not need to install Python or any other tools on your own computer. The steps below assume you are brand new to GitHub and have never configured secrets or workflows before.
 
-1. **Install Python** – Download Python 3.10 or later from
-   [python.org](https://www.python.org/downloads/). During installation
-   make sure to tick the option that adds Python to your `PATH`.
-2. **Download the project** – Click the green **Code** button on this
-   page and choose **Download ZIP**. Once downloaded, extract the ZIP
-   file to a folder you can easily find, for example your Desktop.
-3. **Open a terminal** – On Windows you can use *Command Prompt*. On
-   macOS or Linux open the *Terminal* application. Use the `cd` command
-   to move into the folder you extracted, e.g.:
+1. Create a GitHub account  
+   If you don't already have one, sign up at https://github.com.
 
-   ```bash
-   cd path/to/autotrader_notifier
-   ```
-4. **Install required Python packages** – Run:
+2. Fork this repository  
+   Click the "Fork" button at the top-right of the page to create a copy under your GitHub account.
 
-   ```bash
-   pip install -r requirements.txt
-   ```
-5. **Create configuration file** – Run the setup command and answer the
-   prompts. A `.env` file will be written with your answers.
+3. Add repository secrets  
+   In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field:
 
-   ```bash
-   python autotrader_bot.py --setup
-   ```
-   The script will ask for the values listed in the **Required information** section below.
-6. **Run the notifier** – After the `.env` file is created start the
-   script:
+   - SEARCH_URL – AutoTrader search results URL  
+   - GMAIL_USER – Gmail address used to send emails  
+   - GMAIL_APP_PASSWORD – Gmail app password  
+   - TWILIO_SID – Twilio account SID  
+   - TWILIO_TOKEN – Twilio auth token  
+   - TWILIO_FROM – Twilio phone number to send from  
+   - TWILIO_TO – Phone number to receive SMS messages
 
-   ```bash
-   python autotrader_bot.py
-   ```
-   New listings will trigger an email and SMS and will be recorded in
-`seen_listings.json` so you are not alerted twice.
+4. Schedule the workflow  
+   In your fork, navigate to `.github/workflows/run_bot.yml` and click the pencil icon to edit. Replace the empty `cron:` line under `schedule:` with how often you want the bot to run. The value uses standard five-field cron syntax in UTC.  
+   For example, `0 */2 * * *` will run every two hours. Commit the changes to save the schedule.
 
-If you only want to run the notifier in the cloud with GitHub Actions,
-you can skip the installation steps above and go straight to the next
-section. In that case you will provide the same values as GitHub secrets
-instead of creating a `.env` file.
+5. Run the bot manually (optional)  
+   To trigger the bot manually at any time, go to the "Actions" tab in your fork, select "Run AutoTrader Bot", and click "Run workflow".
 
-### Required information
+What Happens During a Run
 
-During setup you will be prompted for:
-- `SEARCH_URL` – AutoTrader search results URL
-- `GMAIL_USER` – Gmail address used to send emails
-- `GMAIL_APP_PASSWORD` – Gmail app password
-- `TWILIO_SID` – Twilio account SID
-- `TWILIO_TOKEN` – Twilio auth token
-- `TWILIO_FROM` – Twilio phone number to send from
-- `TWILIO_TO` – Phone number to receive SMS messages
+When the workflow runs, it executes `autotrader_bot.py` in the GitHub Actions environment. If there are new listings on AutoTrader, the bot will:
 
-The GitHub Actions workflow uploads the `seen_listings.json` file as a
-build artifact so state is preserved between runs.
+- Send an email using Gmail
+- Send an SMS using Twilio
+- Record the listings in `seen_listings.json` to avoid duplicate alerts
 
-To run the notifier again later just run:
+The `seen_listings.json` file is:
 
-```bash
-python autotrader_bot.py
-```
+- Uploaded as an artifact with each run (kept for 90 days)
+- Used to track previously notified listings and prevent repeated alerts
 
-## Automate in the cloud (GitHub Actions)
+You can download this file from any previous run in the "Actions" tab under the "Artifacts" section. You may also delete it from a run page at any time to reset the history.
 
-GitHub Actions can run the notifier for you on a schedule. Follow these
-steps entirely in your web browser:
+Summary
 
-1. **Fork this repository** – Click the **Fork** button at the top of the
-   page to create a copy under your GitHub account.
-2. Open your fork's **Settings → Secrets and variables → Actions** page.
-   Add a secret for each value you collected during setup:
-   `SEARCH_URL`, `GMAIL_USER`, `GMAIL_APP_PASSWORD`, `TWILIO_SID`,
-   `TWILIO_TOKEN`, `TWILIO_FROM`, and `TWILIO_TO`. You can return to this
-   page later to update the values if they change.
-3. Still in your fork, navigate to `.github/workflows/run_bot.yml` and
-   click the pencil icon to edit the file. The line beginning with
-   `cron:` controls how often the notifier runs (the default is every
-   30 minutes). Change this value if you want a different schedule and
-   choose **Commit changes**.
-4. The workflow will now run automatically according to the schedule you
-   set. To trigger it immediately, open the **Actions** tab, select
-   **Run AutoTrader Bot**, and click **Run workflow**.
-
-Each run uploads a `seen_listings.json` artifact so that previously
-processed listings are remembered. You can delete this artifact from the
-run page any time you want to reset the history.
-
+This setup allows you to monitor new AutoTrader listings completely in the cloud — with no code to install or run on your own computer.
