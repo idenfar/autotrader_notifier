@@ -23,9 +23,10 @@ Everything happens in the cloud using GitHub Actions. You do not need to install
    - TWILIO_FROM – Twilio phone number to send from  
    - TWILIO_TO – Phone number to receive SMS messages
 
-4. Schedule the workflow  
-   In your fork, navigate to `.github/workflows/run_bot.yml` and click the pencil icon to edit. Replace the empty `cron:` line under `schedule:` with how often you want the bot to run. The value uses standard five-field cron syntax in UTC.  
-   For example, `0 */2 * * *` will run every two hours. Commit the changes to save the schedule.
+4. Schedule the workflow
+   The workflow is configured to run every 15 minutes by default. If you prefer a
+   different interval, edit the `cron:` line in `.github/workflows/run_bot.yml`.
+   The value uses standard five-field cron syntax in UTC.
 
 5. Run the bot manually (optional)  
    To trigger the bot manually at any time, go to the "Actions" tab in your fork, select "Run AutoTrader Bot", and click "Run workflow".
@@ -38,12 +39,9 @@ When the workflow runs, it executes `autotrader_bot.py` in the GitHub Actions en
 - Send an SMS using Twilio
 - Record the listings in `seen_listings.json` to avoid duplicate alerts
 
-The `seen_listings.json` file is:
-
-- Uploaded as an artifact with each run (kept for 90 days)
-- Used to track previously notified listings and prevent repeated alerts
-
-You can download this file from any previous run in the "Actions" tab under the "Artifacts" section. You may also delete it from a run page at any time to reset the history.
+The `seen_listings.json` file and archived listing pages are committed back to
+the repository after each run. This history allows you to track all listings that
+triggered a notification.
 
 Summary
 

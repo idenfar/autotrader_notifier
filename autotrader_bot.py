@@ -12,6 +12,7 @@ import os
 import sys
 from email.mime.text import MIMEText
 from pathlib import Path
+import hashlib
 
 import requests
 from bs4 import BeautifulSoup
@@ -30,6 +31,7 @@ ENV_VARS = {
 }
 
 SEEN_FILE = Path("seen_listings.json")
+ARCHIVE_DIR = Path("archives")
 
 
 def interactive_setup() -> None:
@@ -74,6 +76,57 @@ def load_seen() -> set[str]:
 
 def save_seen(seen: set[str]) -> None:
     SEEN_FILE.write_text(json.dumps(sorted(seen), indent=2))
+
+
+def _hash_id(text: str) -> str:
+    """Return a short hash for use as a directory name."""
+    return hashlib.sha1(text.encode()).hexdigest()[:10]
+
+
+def archive_listing(listing: dict) -> None:
+    """Download the listing page and images under ARCHIVE_DIR."""
+    ARCHIVE_DIR.mkdir(exist_ok=True)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    try:
+        resp = requests.get(listing["url"], headers=headers, timeout=15)
+        resp.raise_for_status()
+    except Exception as exc:  # noqa: BLE001
+        print(f"Failed to fetch {listing['url']}: {exc}")
+        return
+
+    lid = _hash_id(listing["url"])
+    listing_dir = ARCHIVE_DIR / lid
+    listing_dir.mkdir(parents=True, exist_ok=True)
+
+    html_file = listing_dir / "page.html"
+    html_file.write_text(resp.text, encoding="utf-8")
+
+    soup = BeautifulSoup(resp.text, "html.parser")
+    image_paths: list[str] = []
+    for i, img_tag in enumerate(soup.find_all("img"), start=1):
+        src = img_tag.get("src")
+        if not src:
+            continue
+        if src.startswith("/"):
+            src = "https://www.autotrader.com" + src
+        try:
+            img_resp = requests.get(src, headers=headers, timeout=15)
+            img_resp.raise_for_status()
+        except Exception:
+            continue
+        suffix = src.split(".")[-1].split("?")[0]
+        img_file = listing_dir / f"image_{i}.{suffix}"
+        img_file.write_bytes(img_resp.content)
+        image_paths.append(str(img_file))
+
+    meta = {
+        "id": listing.get("id"),
+        "title": listing.get("title"),
+        "url": listing.get("url"),
+        "html_file": str(html_file),
+        "images": image_paths,
+    }
+    (listing_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
 def fetch_listings(url: str) -> list[dict[str, str]]:
@@ -133,6 +186,7 @@ def main() -> None:
     for listing in new:
         notify(cfg, listing)
         seen.add(listing["id"])
+        archive_listing(listing)
 
     save_seen(seen)
     print(f"Processed {len(new)} new listings.")
