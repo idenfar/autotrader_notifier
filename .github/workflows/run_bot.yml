@@ -1,39 +1,56 @@
 name: AutoTrader Notifier
 
 on:
+  # run every 15 min plus allow manual “Run workflow”
   schedule:
     - cron: "*/15 * * * *"
   workflow_dispatch:
 
+# grant the workflow token permission to commit/push
 permissions:
-  contents: write           # allow git push from the Action
+  contents: write
 
 jobs:
   watch:
-    runs-on: ubuntu-22.04   # ← 22.04 has libasound2, avoids the 24.04 bug
+    runs-on: ubuntu-22.04       # 22.04 avoids libasound2 install error
     steps:
-      - uses: actions/checkout@v4
+      # —--- checkout full repo history so git push works
+      - name: Checkout repo
+        uses: actions/checkout@v4
         with:
-          fetch-depth: 0        # keep history so git push works
+          fetch-depth: 0
 
-      - name: Set up Python
+      # —--- set up Python
+      - name: Setup Python
         uses: actions/setup-python@v5
         with:
           python-version: "3.11"
 
-      - name: Install Python deps + Playwright browsers
+      # —--- install Python deps *and* Playwright browser bits
+      - name: Install dependencies
         run: |
           pip install -r requirements.txt
           python -m playwright install --with-deps chromium
 
-      - name: Run bot
-        env: ${{ secrets }}     # exposes all repo secrets as env vars
+      # —--- run the bot (DEBUG=true writes DOM + screenshot under archives/_debug/)
+      - name: Run AutoTrader bot
+        env:
+          DEBUG: "true"                       # ← flip to "false" or remove once fixed
+          SEARCH_URL:          ${{ secrets.SEARCH_URL }}
+          GMAIL_USER:          ${{ secrets.GMAIL_USER }}
+          GMAIL_APP_PASSWORD:  ${{ secrets.GMAIL_APP_PASSWORD }}
+          TWILIO_SID:          ${{ secrets.TWILIO_SID }}
+          TWILIO_TOKEN:        ${{ secrets.TWILIO_TOKEN }}
+          TWILIO_FROM:         ${{ secrets.TWILIO_FROM }}
+          TWILIO_TO:           ${{ secrets.TWILIO_TO }}
         run: python autotrader_bot.py
 
-      - name: Commit any updates
+      # —--- commit any new listings, archives, or debug artefacts
+      - name: Commit and push updates
         run: |
           git config user.name  "autotrader-bot"
           git config user.email "actions@github.com"
+          # only commit if something actually changed
           if ! git diff --quiet; then
             git add archives/** seen_listings.json
             git commit -m "Update seen listings and archives [skip ci]"
