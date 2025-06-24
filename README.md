@@ -27,6 +27,8 @@ You don’t need to install Python or run anything on your computer. The bot run
 
 2. Fork This Repository  
    Click the 'Fork' button at the top-right to create your own copy of this repository.
+   Your fork will be public by default. If you prefer to keep it private,
+   go to your forked repository's Settings → General and change the visibility to **Private**.
 
 3. Add Repository Secrets  
    Go to your forked repo’s Settings → Secrets and variables → Actions.  
@@ -39,6 +41,7 @@ You don’t need to install Python or run anything on your computer. The bot run
    - `TWILIO_TOKEN`       – Twilio Auth Token  
    - `TWILIO_FROM`        – Twilio phone number to send from  
    - `TWILIO_TO`          – Your phone number to receive SMS
+   Before using Gmail, enable 2-Step Verification and create an App Password for "Mail". Use that value for `GMAIL_APP_PASSWORD`.
 
    ⚠️ Never commit passwords or .env files to the repository. Use secrets only.
 
