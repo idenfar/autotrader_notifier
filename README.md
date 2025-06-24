@@ -12,8 +12,8 @@ Everything happens in the cloud using GitHub Actions. You do not need to install
 2. Fork this repository  
    Click the "Fork" button at the top-right of the page to create a copy under your GitHub account.
 
-3. Add repository secrets  
-   In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field:
+3. Add repository secrets
+   In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field. These secrets keep your credentials out of version control. **Do not commit real passwords, tokens, or `.env` files to the repository.**
 
    - SEARCH_URL – AutoTrader search results URL  
    - GMAIL_USER – Gmail address used to send emails  
@@ -36,7 +36,7 @@ What Happens During a Run
 When the workflow runs, it executes `autotrader_bot.py` in the GitHub Actions environment. If there are new listings on AutoTrader, the bot will:
 
 - Send an email using Gmail
-- Send an SMS using Twilio
+- Send an SMS using Twilio *(SMS may incur charges depending on your Twilio account)*
 - Record the listings in `seen_listings.json` to avoid duplicate alerts
 
 The `seen_listings.json` file and archived listing pages are committed back to
