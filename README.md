@@ -15,13 +15,13 @@ Everything happens in the cloud using GitHub Actions. You do not need to install
 3. Add repository secrets
    In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field. These secrets keep your credentials out of version control. **Do not commit real passwords, tokens, or `.env` files to the repository.**
 
-   - SEARCH_URL – AutoTrader search results URL  
-   - GMAIL_USER – Gmail address used to send emails  
-   - GMAIL_APP_PASSWORD – Gmail app password  
-   - TWILIO_SID – Twilio account SID  
-   - TWILIO_TOKEN – Twilio auth token  
-   - TWILIO_FROM – Twilio phone number to send from  
-   - TWILIO_TO – Phone number to receive SMS messages
+   - `SEARCH_URL` – AutoTrader search results URL  
+   - `GMAIL_USER` – Gmail address used to send emails  
+   - `GMAIL_APP_PASSWORD` – Gmail app password  
+   - `TWILIO_SID` – Twilio account SID  
+   - `TWILIO_TOKEN` – Twilio auth token  
+   - `TWILIO_FROM` – Twilio phone number to send from  
+   - `TWILIO_TO` – Phone number to receive SMS messages
 
 4. Schedule the workflow
    The workflow is configured to run every 15 minutes by default. If you prefer a
