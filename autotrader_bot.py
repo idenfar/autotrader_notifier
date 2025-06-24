@@ -1,216 +1,151 @@
 #!/usr/bin/env python3
-"""Simple AutoTrader notifier.
-
-Fetches search results from AutoTrader and sends notifications via
-Gmail and Twilio for new listings. Credentials and configuration are
-read from environment variables or a .env file.
 """
-from __future__ import annotations
+AutoTrader.ca notifier ‒ GitHub-Actions friendly
 
+Changes
+▪ switch scraper to Playwright (handles AutoTrader.ca’s JS-rendered listings)
+▪ robust selectors for CA site
+▪ graceful fall-back / logging
+"""
+
+import hashlib
 import json
 import os
+import smtplib
 import sys
+from datetime import datetime
 from email.mime.text import MIMEText
 from pathlib import Path
-import hashlib
+from typing import List, Dict
 
-import requests
-from bs4 import BeautifulSoup
 from dotenv import load_dotenv
 from twilio.rest import Client
+from playwright.sync_api import sync_playwright, TimeoutError as PWTimeout
 
-# Mapping of required environment variables and friendly descriptions
-ENV_VARS = {
-    "SEARCH_URL": "AutoTrader search results URL",
-    "GMAIL_USER": "Gmail address",
-    "GMAIL_APP_PASSWORD": "Gmail app password",
-    "TWILIO_SID": "Twilio account SID",
-    "TWILIO_TOKEN": "Twilio auth token",
-    "TWILIO_FROM": "Twilio 'from' phone number",
-    "TWILIO_TO": "Destination phone number",
-}
+### ---------- config & helpers ------------------------------------------------
+REPO_ROOT = Path(__file__).parent
+SEEN_FILE = REPO_ROOT / "seen_listings.json"
+ARCHIVE_DIR = REPO_ROOT / "archives"
 
-SEEN_FILE = Path("seen_listings.json")
-ARCHIVE_DIR = Path("archives")
+REQUIRED_ENV = [
+    "SEARCH_URL",
+    "GMAIL_USER",
+    "GMAIL_APP_PASSWORD",
+    "TWILIO_SID",
+    "TWILIO_TOKEN",
+    "TWILIO_FROM",
+    "TWILIO_TO",
+]
 
-
-def interactive_setup() -> None:
-    """Prompt the user for credentials and save them to .env."""
-    print("Interactive setup for AutoTrader notifier.\nValues will be written to .env")
-    if Path(".env").exists():
-        ans = input(".env already exists. Overwrite? [y/N]: ").strip().lower()
-        if ans != "y":
-            print("Setup aborted.")
-            return
-    lines = []
-    for key, desc in ENV_VARS.items():
-        value = input(f"{desc} ({key}): ").strip()
-        lines.append(f"{key}={value}")
-    Path(".env").write_text("\n".join(lines))
-    print(".env file written.")
-
-
-def load_config() -> dict:
-    """Load environment variables and ensure all are present."""
+def load_env() -> None:
     load_dotenv()
-    config = {}
-    missing = []
-    for key in ENV_VARS:
-        val = os.getenv(key)
-        if not val:
-            missing.append(key)
-        config[key] = val
+    missing = [k for k in REQUIRED_ENV if not os.getenv(k)]
     if missing:
-        raise RuntimeError(f"Missing environment variables: {', '.join(missing)}")
-    return config
+        print(f"[fatal] Missing env vars: {', '.join(missing)}", file=sys.stderr)
+        sys.exit(1)
 
-
-def load_seen() -> set[str]:
+def load_seen() -> set:
     if SEEN_FILE.exists():
-        try:
-            return set(json.loads(SEEN_FILE.read_text()))
-        except json.JSONDecodeError:
-            return set()
+        return set(json.loads(SEEN_FILE.read_text()))
     return set()
 
-
-def save_seen(seen: set[str]) -> None:
+def save_seen(seen: set) -> None:
     SEEN_FILE.write_text(json.dumps(sorted(seen), indent=2))
 
-
-def _hash_id(text: str) -> str:
-    """Return a short hash for use as a directory name."""
+def sha10(text: str) -> str:
     return hashlib.sha1(text.encode()).hexdigest()[:10]
 
+### ---------- scraping --------------------------------------------------------
 
-def archive_listing(listing: dict) -> None:
-    """Download the listing page and images under ARCHIVE_DIR."""
-    ARCHIVE_DIR.mkdir(exist_ok=True)
-    headers = {"User-Agent": "Mozilla/5.0"}
-    try:
-        resp = requests.get(listing["url"], headers=headers, timeout=15)
-        resp.raise_for_status()
-    except Exception as exc:
-        print(f"Failed to fetch {listing['url']}: {exc}")
-        return
-
-    lid = _hash_id(listing["url"])
-    listing_dir = ARCHIVE_DIR / lid
-    listing_dir.mkdir(parents=True, exist_ok=True)
-
-    html_file = listing_dir / "page.html"
-    html_file.write_text(resp.text, encoding="utf-8")
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    image_paths: list[str] = []
-    for i, img_tag in enumerate(soup.find_all("img"), start=1):
-        src = img_tag.get("src")
-        if not src:
-            continue
-        if src.startswith("/"):
-            src = "https://www.autotrader.com" + src
+def fetch_listings(url: str) -> List[Dict]:
+    """
+    Uses Playwright (headless Chromium) because AutoTrader.ca injects listings
+    client-side.  We wait for the listing cards, then pull id, title, href.
+    """
+    print(f"Fetching {url} ...")
+    with sync_playwright() as pw:
+        browser = pw.chromium.launch(headless=True)
+        page = browser.new_page()
         try:
-            img_resp = requests.get(src, headers=headers, timeout=15)
-            img_resp.raise_for_status()
-        except Exception:
-            continue
-        suffix = src.split(".")[-1].split("?")[0]
-        img_file = listing_dir / f"image_{i}.{suffix}"
-        img_file.write_bytes(img_resp.content)
-        image_paths.append(str(img_file))
+            page.goto(url, timeout=60_000)
+            page.wait_for_selector('[data-qaid="cntnr-listing-card"]',
+                                   timeout=15_000)
+        except PWTimeout:
+            print("[warn] No listing cards found (timeout) – site layout "
+                  "may have changed.")
+            return []
+        cards = page.query_selector_all('[data-qaid="cntnr-listing-card"]')
+        listings = []
+        for c in cards:
+            lid = c.get_attribute("data-listing-id")
+            # some cards (e.g. ads) miss this attr → skip
+            if not lid:
+                continue
+            title_el = c.query_selector('[data-qaid="card-title"]')
+            title = title_el.inner_text().strip() if title_el else "Untitled"
+            link_el = c.query_selector("a")
+            href = ("https://www.autotrader.ca"
+                    + link_el.get_attribute("href")) if link_el else url
+            listings.append({"id": lid, "title": title, "url": href})
+        browser.close()
+        print(f"Parsed {len(listings)} listings.")
+        return listings
 
-    meta = {
-        "id": listing.get("id"),
-        "title": listing.get("title"),
-        "url": listing.get("url"),
-        "html_file": str(html_file),
-        "images": image_paths,
-    }
-    (listing_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
+### ---------- notifications ---------------------------------------------------
 
-
-def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
-    """Fetch and parse listings from AutoTrader search results."""
-    headers = {"User-Agent": "Mozilla/5.0"}
-    resp = requests.get(url, headers=headers, timeout=15)
-    resp.raise_for_status()
-
-    if dump_html:
-        print(resp.text)
-
-    soup = BeautifulSoup(resp.text, "html.parser")
-    listings = []
-
-    # More flexible tag selection with fallback
-    tags = soup.select("[data-listing-id]")
-    if not tags:
-        tags = soup.select("div[data-listing-id]")
-
-    for tag in tags:
-        lid = tag.get("data-listing-id")
-        title = tag.get_text(" ", strip=True)[:80]
-        listing_url = (
-            "https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId="
-            f"{lid}"
-        )
-        listings.append({"id": lid, "title": title, "url": listing_url})
-
-    return listings
-
-
-def send_email(cfg: dict, msg: str) -> None:
-    mime = MIMEText(msg)
-    mime["Subject"] = "New AutoTrader listing"
-    mime["From"] = cfg["GMAIL_USER"]
-    mime["To"] = cfg["GMAIL_USER"]
-
-    import smtplib
-
+def send_email(subject: str, body: str) -> None:
+    msg = MIMEText(body)
+    msg["Subject"] = subject
+    msg["From"] = os.getenv("GMAIL_USER")
+    msg["To"] = os.getenv("GMAIL_USER")
     with smtplib.SMTP_SSL("smtp.gmail.com", 465) as smtp:
-        smtp.login(cfg["GMAIL_USER"], cfg["GMAIL_APP_PASSWORD"])
-        smtp.sendmail(cfg["GMAIL_USER"], [cfg["GMAIL_USER"]], mime.as_string())
+        smtp.login(os.getenv("GMAIL_USER"), os.getenv("GMAIL_APP_PASSWORD"))
+        smtp.sendmail(msg["From"], [msg["To"]], msg.as_string())
 
+def send_sms(body: str) -> None:
+    cli = Client(os.getenv("TWILIO_SID"), os.getenv("TWILIO_TOKEN"))
+    cli.messages.create(
+        body=body,
+        from_=os.getenv("TWILIO_FROM"),
+        to=os.getenv("TWILIO_TO"),
+    )
 
-def send_sms(cfg: dict, msg: str) -> None:
-    client = Client(cfg["TWILIO_SID"], cfg["TWILIO_TOKEN"])
-    client.messages.create(body=msg, from_=cfg["TWILIO_FROM"], to=cfg["TWILIO_TO"])
+def notify(listing: Dict) -> None:
+    text = f"{listing['title']}\n{listing['url']}"
+    send_email("New AutoTrader listing", text)
+    send_sms(text)
 
+### ---------- archiving -------------------------------------------------------
 
-def notify(cfg: dict, listing: dict) -> None:
-    msg = f"{listing['title']}\n{listing['url']}"
-    try:
-        send_email(cfg, msg)
-    except Exception as exc:
-        print(f"Failed to send email: {exc}")
-    try:
-        send_sms(cfg, msg)
-    except Exception as exc:
-        print(f"Failed to send SMS: {exc}")
+def archive(listing: Dict) -> None:
+    slug = sha10(listing["id"])
+    dest = ARCHIVE_DIR / slug
+    dest.mkdir(parents=True, exist_ok=True)
+    meta = {
+        "id": listing["id"],
+        "title": listing["title"],
+        "url": listing["url"],
+        "fetched": datetime.utcnow().isoformat(timespec="seconds"),
+    }
+    (dest / "metadata.json").write_text(json.dumps(meta, indent=2))
 
+### ---------- main ------------------------------------------------------------
 
 def main() -> None:
-    if "--setup" in sys.argv:
-        interactive_setup()
-        return
-
-    cfg = load_config()
+    load_env()
     seen = load_seen()
-    dump_html = "--dump-html" in sys.argv
-    listings = fetch_listings(cfg["SEARCH_URL"], dump_html=dump_html)
-    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
-    if not listings:
-        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
-    new = [l for l in listings if l["id"] not in seen]
-    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
-
-    for listing in new:
-        notify(cfg, listing)
-        seen.add(listing["id"])
-        archive_listing(listing)
-
+    listings = fetch_listings(os.getenv("SEARCH_URL"))
+    new = [x for x in listings if x["id"] not in seen]
+    print(f"Found {len(new)} new listings (seen cache: {len(seen)})")
+    for lst in new:
+        try:
+            notify(lst)
+            archive(lst)
+            seen.add(lst["id"])
+        except Exception as exc:
+            print(f"[err] failed processing {lst['id']}: {exc}", file=sys.stderr)
     save_seen(seen)
-    print(f"Processed {len(new)} new listings.")
-
+    print("Done.")
 
 if __name__ == "__main__":
     main()
