@@ -2,8 +2,11 @@ name: Run AutoTrader Bot
 
 on:
   schedule:
-    - cron: 
+    - cron:
   workflow_dispatch:
+
+permissions:
+  contents: write
 
 jobs:
   run:
@@ -28,3 +31,14 @@ jobs:
         with:
           name: seen_listings
           path: seen_listings.json
+      - name: Commit updated state
+        run: |
+          if [ -n "$(git status --porcelain seen_listings.json)" ]; then
+            git config user.name "AutoTrader Bot"
+            git config user.email "actions@github.com"
+            git add seen_listings.json
+            git commit -m "Update seen listings" || true
+            git push
+          else
+            echo "No changes to commit"
+          fi
