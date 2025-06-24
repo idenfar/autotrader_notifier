@@ -13,12 +13,17 @@ Everything happens in the cloud using GitHub Actions. You do not need to install
    Click the "Fork" button at the top-right of the page to create a copy under your GitHub account.
 
 3. Add repository secrets  
-   In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field. These secrets keep your credentials out of version control. **Do not commit real passwords, tokens, or `.env` files to the repository.**
+- Send an email using Gmail.
+- Send an SMS using Twilio.
+- Save the full HTML for each listing along with all images under `archives/`.
+- Record the unique listing IDs in `seen_listings.json` to avoid duplicate alerts.
+For each new listing, a directory is created under `archives/` using a short hash of the URL. Inside that directory you will find:
 
-   - SEARCH_URL – AutoTrader search results URL  
-   - GMAIL_USER – Gmail address used to send emails  
-   - GMAIL_APP_PASSWORD – Gmail app password  
-   - TWILIO_SID – Twilio account SID  
+- `page.html` – the raw HTML of the listing page.
+- `image_*.jpg` (or other extensions) – every image downloaded from the listing.
+- `metadata.json` – a small file with the listing title, URL, and paths to the saved files.
+
+Both `seen_listings.json` and everything under `archives/` are committed back to your repository after the run completes. You can browse the commit history on GitHub to review exactly which listings were processed and open any archived HTML file directly from the `archives/` folder.
    - TWILIO_TOKEN – Twilio auth token  
    - TWILIO_FROM – Twilio phone number to send from  
    - TWILIO_TO – Phone number to receive SMS messages
