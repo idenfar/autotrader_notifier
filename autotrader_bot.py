@@ -90,7 +90,7 @@ def archive_listing(listing: dict) -> None:
     try:
         resp = requests.get(listing["url"], headers=headers, timeout=15)
         resp.raise_for_status()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to fetch {listing['url']}: {exc}")
         return
 
@@ -131,20 +131,21 @@ def archive_listing(listing: dict) -> None:
 
 def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
     """Fetch and parse listings from AutoTrader search results."""
-    # AutoTrader returns HTTP 403 when no User-Agent header is sent
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
+
     if dump_html:
         print(resp.text)
+
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
-    # Some pages place the data-listing-id attribute on elements other than
-    # <div>. Search broadly and fall back to the original selector if needed so
-    # unit tests continue to pass.
+
+    # More flexible tag selection with fallback
     tags = soup.select("[data-listing-id]")
     if not tags:
         tags = soup.select("div[data-listing-id]")
+
     for tag in tags:
         lid = tag.get("data-listing-id")
         title = tag.get_text(" ", strip=True)[:80]
@@ -153,6 +154,7 @@ def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
             f"{lid}"
         )
         listings.append({"id": lid, "title": title, "url": listing_url})
+
     return listings
 
 
@@ -178,11 +180,11 @@ def notify(cfg: dict, listing: dict) -> None:
     msg = f"{listing['title']}\n{listing['url']}"
     try:
         send_email(cfg, msg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to send email: {exc}")
     try:
         send_sms(cfg, msg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to send SMS: {exc}")
 
 
