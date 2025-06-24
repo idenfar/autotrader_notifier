@@ -131,7 +131,8 @@ def archive_listing(listing: dict) -> None:
 
 def fetch_listings(url: str) -> list[dict[str, str]]:
     """Fetch and parse listings from AutoTrader search results."""
-    resp = requests.get(url, timeout=15)
+    headers = {"User-Agent": "Mozilla/5.0"}
+    resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
