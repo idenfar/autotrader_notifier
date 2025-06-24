@@ -129,16 +129,29 @@ def archive_listing(listing: dict) -> None:
     (listing_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
-def fetch_listings(url: str) -> list[dict[str, str]]:
+def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
     """Fetch and parse listings from AutoTrader search results."""
-    resp = requests.get(url, timeout=15)
+    # AutoTrader returns HTTP 403 when no User-Agent header is sent
+    headers = {"User-Agent": "Mozilla/5.0"}
+    resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
+    if dump_html:
+        print(resp.text)
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
-    for div in soup.select("div[data-listing-id]"):
-        lid = div.get("data-listing-id")
-        title = div.get_text(" ", strip=True)[:80]
-        listing_url = f"https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId={lid}"
+    # Some pages place the data-listing-id attribute on elements other than
+    # <div>. Search broadly and fall back to the original selector if needed so
+    # unit tests continue to pass.
+    tags = soup.select("[data-listing-id]")
+    if not tags:
+        tags = soup.select("div[data-listing-id]")
+    for tag in tags:
+        lid = tag.get("data-listing-id")
+        title = tag.get_text(" ", strip=True)[:80]
+        listing_url = (
+            "https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId="
+            f"{lid}"
+        )
         listings.append({"id": lid, "title": title, "url": listing_url})
     return listings
 
@@ -180,8 +193,13 @@ def main() -> None:
 
     cfg = load_config()
     seen = load_seen()
-    listings = fetch_listings(cfg["SEARCH_URL"])
+    dump_html = "--dump-html" in sys.argv
+    listings = fetch_listings(cfg["SEARCH_URL"], dump_html=dump_html)
+    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
+    if not listings:
+        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
     new = [l for l in listings if l["id"] not in seen]
+    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
 
     for listing in new:
         notify(cfg, listing)
