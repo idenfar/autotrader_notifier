@@ -46,3 +46,9 @@ triggered a notification.
 Summary
 
 This setup allows you to monitor new AutoTrader listings completely in the cloud — with no code to install or run on your own computer.
+
+Local Setup
+
+If you prefer to run the script yourself, execute `python autotrader_bot.py --setup` once.
+It will prompt for your Gmail, Twilio, and search URL credentials, then save them in a
+`.env` file for subsequent runs.
