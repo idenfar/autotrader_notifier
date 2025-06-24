@@ -1,54 +1,84 @@
-AutoTrader Notifier
+🚗 AutoTrader Notifier
 
-This project provides a small Python script that checks an AutoTrader search page and notifies you of new listings via Gmail and Twilio SMS.
+A Python-based GitHub Actions bot that monitors an AutoTrader.ca search page and notifies you of new listings via Gmail and Twilio SMS — all automatically in the cloud.
 
-Running the Bot in the Cloud (GitHub Actions)
+===============================================================================
 
-Everything happens in the cloud using GitHub Actions. You do not need to install Python or any other tools on your own computer. The steps below assume you are brand new to GitHub and have never configured secrets or workflows before.
+✨ Features
 
-1. Create a GitHub account  
-   If you don't already have one, sign up at https://github.com.
+- Fully cloud-based: runs on GitHub Actions
+- Sends instant email and SMS notifications for new listings
+- Remembers previously seen listings to prevent duplicates
+- Archives full HTML and images of each listing
+- Commits historical data to your repository for tracking
 
-2. Fork this repository  
-   Click the "Fork" button at the top-right of the page to create a copy under your GitHub account.
+===============================================================================
 
-3. Add repository secrets
-   In your fork, go to Settings → Secrets and variables → Actions. Use "New repository secret" to create each of the following entries. Enter the secret name exactly as shown and paste the value into the field. These secrets keep your credentials out of version control. **Do not commit real passwords, tokens, or `.env` files to the repository.**
+☁️ Cloud-Only Setup (No Local Installation Needed)
 
-   - `SEARCH_URL` – AutoTrader search results URL  
-   - `GMAIL_USER` – Gmail address used to send emails  
-   - `GMAIL_APP_PASSWORD` – Gmail app password  
-   - `TWILIO_SID` – Twilio account SID  
-   - `TWILIO_TOKEN` – Twilio auth token  
-   - `TWILIO_FROM` – Twilio phone number to send from  
-   - `TWILIO_TO` – Phone number to receive SMS messages
+You don’t need to install Python or run anything on your computer. The bot runs entirely in the GitHub Actions environment.
 
-4. Schedule the workflow
-   The workflow is configured to run every 15 minutes by default. If you prefer a
-   different interval, edit the `cron:` line in `.github/workflows/run_bot.yml`.
-   The value uses standard five-field cron syntax in UTC.
+-------------------------------------------------------------------------------
 
-5. Run the bot manually (optional)  
-   To trigger the bot manually at any time, go to the "Actions" tab in your fork, select "Run AutoTrader Bot", and click "Run workflow".
+🔧 Step-by-Step Instructions
 
-What Happens During a Run
+1. Create a GitHub Account  
+   Sign up at https://github.com if you don’t already have an account.
 
-When the workflow runs, it executes `autotrader_bot.py` in the GitHub Actions environment. If there are new listings on AutoTrader, the bot will:
+2. Fork This Repository  
+   Click the 'Fork' button at the top-right to create your own copy of this repository.
 
-- Send an email using Gmail
-- Send an SMS using Twilio *(SMS may incur charges depending on your Twilio account)*
-- Record the listings in `seen_listings.json` to avoid duplicate alerts
+3. Add Repository Secrets  
+   Go to your forked repo’s Settings → Secrets and variables → Actions.  
+   Click 'New repository secret' for each of the following:
 
-The `seen_listings.json` file and archived listing pages are committed back to
-the repository after each run. This history allows you to track all listings that
-triggered a notification.
+   - `SEARCH_URL`         – AutoTrader search results URL  
+   - `GMAIL_USER`         – Gmail address used to send emails  
+   - `GMAIL_APP_PASSWORD` – Gmail app password (use App Passwords, not your login password)  
+   - `TWILIO_SID`         – Twilio Account SID  
+   - `TWILIO_TOKEN`       – Twilio Auth Token  
+   - `TWILIO_FROM`        – Twilio phone number to send from  
+   - `TWILIO_TO`          – Your phone number to receive SMS
 
-Summary
+   ⚠️ Never commit passwords or .env files to the repository. Use secrets only.
 
-This setup allows you to monitor new AutoTrader listings completely in the cloud — with no code to install or run on your own computer.
+4. Schedule the Workflow  
+   Open `.github/workflows/run_bot.yml` and edit the `cron:` line to control how often the bot runs (default is every 15 minutes).
 
-Local Setup
+   Example (every 15 minutes UTC):
+   schedule:
+     - cron: '*/15 * * * *'
 
-If you prefer to run the script yourself, execute `python autotrader_bot.py --setup` once.
-It will prompt for your Gmail, Twilio, and search URL credentials, then save them in a
-`.env` file for subsequent runs.
+   Visit https://crontab.guru for custom schedule formatting.
+
+5. Run It Manually (Optional)  
+   Go to the 'Actions' tab → select 'Run AutoTrader Bot' → click 'Run workflow'.
+
+===============================================================================
+
+🏃 What Happens During a Run
+
+- Executes `autotrader_bot.py`  
+- Detects new listings from your `SEARCH_URL`  
+- Sends:
+  - 📧 Email via Gmail  
+  - 📱 SMS via Twilio (charges may apply)  
+- Records listing IDs in `seen_listings.json`  
+- Archives each listing under `archives/`, including:
+  - `page.html` – full listing HTML  
+  - `image_*.jpg` – all listing images  
+  - `metadata.json` – title, URL, and file references
+
+All of this is committed back to your repository automatically.
+
+===============================================================================
+
+📄 License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
+
+===============================================================================
+
+🙋‍♂️ Questions or Contributions?
+
+Feel free to open an issue or submit a pull request. Contributions are welcome!
