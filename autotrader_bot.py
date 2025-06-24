@@ -134,13 +134,16 @@ def fetch_listings(url: str) -> list[dict[str, str]]:
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
+    
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
+    
     for div in soup.select("div[data-listing-id]"):
         lid = div.get("data-listing-id")
         title = div.get_text(" ", strip=True)[:80]
         listing_url = f"https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId={lid}"
         listings.append({"id": lid, "title": title, "url": listing_url})
+    
     return listings
 
 
