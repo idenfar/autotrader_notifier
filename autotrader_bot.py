@@ -131,7 +131,7 @@ def archive_listing(listing: dict) -> None:
 
 def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
     """Fetch and parse listings from AutoTrader search results."""
-    headers = {"User-Agent": "Mozilla/5.0"}
+    # Avoid HTTP 403 by always sending a User-Agent header
     resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
 
