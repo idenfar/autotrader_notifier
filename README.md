@@ -51,4 +51,8 @@ Add these secrets to your repository:
 - `TWILIO_TO` – Phone number to receive SMS messages
 
 The GitHub Actions workflow uploads the `seen_listings.json` file as a
-build artifact so state is preserved between runs.
+build artifact so state is preserved between runs. Artifacts are kept by
+GitHub for **90 days** and then automatically deleted. To view or download
+the file, open any run in the **Actions** tab and look for the **Artifacts**
+section near the bottom of the page. Click `seen_listings` to download a
+zip containing `seen_listings.json`.
