@@ -52,4 +52,3 @@ Add these secrets to your repository:
 
 The GitHub Actions workflow uploads the `seen_listings.json` file as a
 build artifact so state is preserved between runs.
-
