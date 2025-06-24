@@ -90,7 +90,7 @@ def archive_listing(listing: dict) -> None:
     try:
         resp = requests.get(listing["url"], headers=headers, timeout=15)
         resp.raise_for_status()
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to fetch {listing['url']}: {exc}")
         return
 
@@ -134,16 +134,23 @@ def fetch_listings(url: str) -> list[dict[str, str]]:
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
-    
+
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
-    
-    for div in soup.select("div[data-listing-id]"):
-        lid = div.get("data-listing-id")
-        title = div.get_text(" ", strip=True)[:80]
-        listing_url = f"https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId={lid}"
+
+    # More flexible tag selection with fallback for compatibility
+    tags = soup.select("[data-listing-id]")
+    if not tags:
+        tags = soup.select("div[data-listing-id]")
+    for tag in tags:
+        lid = tag.get("data-listing-id")
+        title = tag.get_text(" ", strip=True)[:80]
+        listing_url = (
+            "https://www.autotrader.com/cars-for-sale/vehicledetails.xhtml?listingId="
+            f"{lid}"
+        )
         listings.append({"id": lid, "title": title, "url": listing_url})
-    
+
     return listings
 
 
@@ -160,6 +167,10 @@ def send_email(cfg: dict, msg: str) -> None:
         smtp.sendmail(cfg["GMAIL_USER"], [cfg["GMAIL_USER"]], mime.as_string())
 
 
+    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
+    if not listings:
+        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
+    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
 def send_sms(cfg: dict, msg: str) -> None:
     client = Client(cfg["TWILIO_SID"], cfg["TWILIO_TOKEN"])
     client.messages.create(body=msg, from_=cfg["TWILIO_FROM"], to=cfg["TWILIO_TO"])
@@ -169,11 +180,11 @@ def notify(cfg: dict, listing: dict) -> None:
     msg = f"{listing['title']}\n{listing['url']}"
     try:
         send_email(cfg, msg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to send email: {exc}")
     try:
         send_sms(cfg, msg)
-    except Exception as exc:  # noqa: BLE001
+    except Exception as exc:
         print(f"Failed to send SMS: {exc}")
 
 
