@@ -129,19 +129,23 @@ def archive_listing(listing: dict) -> None:
     (listing_dir / "metadata.json").write_text(json.dumps(meta, indent=2))
 
 
-def fetch_listings(url: str) -> list[dict[str, str]]:
+def fetch_listings(url: str, dump_html: bool = False) -> list[dict[str, str]]:
     """Fetch and parse listings from AutoTrader search results."""
     headers = {"User-Agent": "Mozilla/5.0"}
     resp = requests.get(url, headers=headers, timeout=15)
     resp.raise_for_status()
 
+    if dump_html:
+        print(resp.text)
+
     soup = BeautifulSoup(resp.text, "html.parser")
     listings = []
 
-    # More flexible tag selection with fallback for compatibility
+    # More flexible tag selection with fallback
     tags = soup.select("[data-listing-id]")
     if not tags:
         tags = soup.select("div[data-listing-id]")
+
     for tag in tags:
         lid = tag.get("data-listing-id")
         title = tag.get_text(" ", strip=True)[:80]
@@ -167,10 +171,6 @@ def send_email(cfg: dict, msg: str) -> None:
         smtp.sendmail(cfg["GMAIL_USER"], [cfg["GMAIL_USER"]], mime.as_string())
 
 
-    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
-    if not listings:
-        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
-    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
 def send_sms(cfg: dict, msg: str) -> None:
     client = Client(cfg["TWILIO_SID"], cfg["TWILIO_TOKEN"])
     client.messages.create(body=msg, from_=cfg["TWILIO_FROM"], to=cfg["TWILIO_TO"])
@@ -195,8 +195,13 @@ def main() -> None:
 
     cfg = load_config()
     seen = load_seen()
-    listings = fetch_listings(cfg["SEARCH_URL"])
+    dump_html = "--dump-html" in sys.argv
+    listings = fetch_listings(cfg["SEARCH_URL"], dump_html=dump_html)
+    print(f"Fetched {len(listings)} listings from {cfg['SEARCH_URL']}")
+    if not listings:
+        print("Warning: no listings parsed. Check SEARCH_URL and page markup.")
     new = [l for l in listings if l["id"] not in seen]
+    print(f"Found {len(new)} new listings (seen count: {len(seen)})")
 
     for listing in new:
         notify(cfg, listing)
