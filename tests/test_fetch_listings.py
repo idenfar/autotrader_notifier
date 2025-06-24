@@ -74,7 +74,7 @@ class DummyResponse:
         pass
 
 
-def dummy_get(url: str, timeout: int = 15, headers=None):
+def dummy_get(url: str, timeout: int = 15, headers: dict | None = None):
     return DummyResponse(SAMPLE_HTML)
 
 
