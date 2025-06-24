@@ -46,3 +46,7 @@ triggered a notification.
 Summary
 
 This setup allows you to monitor new AutoTrader listings completely in the cloud — with no code to install or run on your own computer.
+
+License
+
+This project is licensed under the MIT License. See the LICENSE file for details.
