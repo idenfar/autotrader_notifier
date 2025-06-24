@@ -25,13 +25,21 @@ You don’t need to install Python or run anything on your computer. The bot run
 1. Create a GitHub Account  
    Sign up at https://github.com if you don’t already have an account.
 
-2. Fork This Repository  
+2. Fork This Repository
    Click the 'Fork' button at the top-right to create your own copy of this repository.
    Your fork will be public by default. If you prefer to keep it private,
    go to your forked repository's Settings → General and change the visibility to **Private**.
 
-3. Add Repository Secrets  
-   Go to your forked repo’s Settings → Secrets and variables → Actions.  
+3. Enable Gmail 2-Step Verification and App Password
+   1. Open https://myaccount.google.com/security in your browser.
+   2. Turn on **2-Step Verification** under "How you sign in to Google" and follow the steps.
+   3. After it’s enabled, go back to the **Security** page and choose **App passwords**.
+   4. Select **Mail** as the app and click **Generate**.
+   5. Google will show a 16-character password. Copy it (without spaces).
+   6. You’ll paste this password as `GMAIL_APP_PASSWORD` in the next step.
+
+4. Add Repository Secrets
+   Go to your forked repo’s Settings → Secrets and variables → Actions.
    Click 'New repository secret' for each of the following:
 
    - `SEARCH_URL`         – AutoTrader search results URL  
@@ -41,11 +49,10 @@ You don’t need to install Python or run anything on your computer. The bot run
    - `TWILIO_TOKEN`       – Twilio Auth Token  
    - `TWILIO_FROM`        – Twilio phone number to send from  
    - `TWILIO_TO`          – Your phone number to receive SMS
-   Before using Gmail, enable 2-Step Verification and create an App Password for "Mail". Use that value for `GMAIL_APP_PASSWORD`.
 
    ⚠️ Never commit passwords or .env files to the repository. Use secrets only.
 
-4. Schedule the Workflow  
+5. Schedule the Workflow
    Open `.github/workflows/run_bot.yml` and edit the `cron:` line to control how often the bot runs (default is every 15 minutes).
 
    Example (every 15 minutes UTC):
@@ -54,7 +61,7 @@ You don’t need to install Python or run anything on your computer. The bot run
 
    Visit https://crontab.guru for custom schedule formatting.
 
-5. Run It Manually (Optional)  
+6. Run It Manually (Optional)
    Go to the 'Actions' tab → select 'Run AutoTrader Bot' → click 'Run workflow'.
 
 ===============================================================================
