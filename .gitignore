@@ -4,6 +4,3 @@ __pycache__/
 
 # Environment
 .env
-
-# Runtime data
-seen_listings.json
