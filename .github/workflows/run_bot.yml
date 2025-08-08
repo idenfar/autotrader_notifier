@@ -1,10 +1,10 @@
 name: AutoTrader Notifier
 
-on:
-  # run every 15 min plus allow manual “Run workflow”
-  schedule:
-    - cron: "*/15 * * * *"
-  workflow_dispatch:
+# on:
+#   # run every 15 min plus allow manual “Run workflow”
+#   schedule:
+#     - cron: "*/15 * * * *"
+#   workflow_dispatch:
 
 # grant the workflow token permission to commit/push
 permissions:
